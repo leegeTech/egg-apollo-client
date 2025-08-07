@@ -1,5 +1,5 @@
 {
-    "name": "@gaoding/egg-apollo-client",
+    "name": "leege-apollo-client",
     "version": "2.0.15",
     "description": "携程 Apollo 配置中心 egg 客户端版本",
     "eggPlugin": {
@@ -70,13 +70,13 @@
     "eslintIgnore": [
         "coverage"
     ],
-    "author": "tunan",
+    "author": "simon",
     "maintainers": [
         {
-            "name": "tunan",
-            "email": "tunan@gaoding.com"
+            "name": "simon",
+            "email": "5042084@163.com"
         }
     ],
     "license": "MIT",
-    "homepage": "https://github.com/xuezier/egg-apollo-client"
+    "homepage": "https://github.com/leegeTech/egg-apollo-client"
 }
