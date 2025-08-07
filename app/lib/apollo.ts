@@ -5,6 +5,10 @@ import { Application } from 'egg';
 import { Apollo as NativeApollo } from '@gaoding/apollo-client';
 
 import { IApolloConfig } from '@gaoding/apollo-client/dist/interface/IApolloConfig';
+import { tmpdir } from 'os';
+import * as path from 'path';
+import { EnvWriter } from './env_writer';
+import { EnvReader } from './env_reader';
 
 export interface ApolloReponseConfigData {
     // '{"appId":"ums-local","cluster":"default","namespaceName":"application","configurations":{"NODE_ENV":"production"}
@@ -135,6 +139,37 @@ export default class Apollo extends NativeApollo {
         return this.configs.getDate(key);
     }
 
+    protected checkEnvPath(envPath?: string): string {
+        const baseDir = tmpdir();
+        if (!envPath) {
+            return baseDir;
+        } else {
+            if (!path.isAbsolute(envPath)) {
+                // envPath = envPath.replace('/', '');
+                envPath = path.resolve(baseDir, envPath);
+            }
+
+            if (fs.existsSync(envPath)) {
+                return envPath;
+            } else {
+                const last = envPath.split('/').pop();
+                if (last && last.indexOf('.') > -1) {
+                    // 如果 env path 是一个文件路径
+                    const dir = envPath.replace(new RegExp(`${last}$`), '');
+                    if (!fs.existsSync(dir)) {
+                        //  创建前置文件夹
+                        fs.mkdirSync(dir);
+                    }
+                    return dir;
+                } else {
+                    // 如果 env path 是一个文件夹路径
+                    fs.mkdirSync(envPath);
+                    return envPath;
+                }
+            }
+        }
+    }
+
     protected saveEnvFile(data: ApolloReponseConfigData) {
         if (!(this.app.type === 'agent'))
             return;
@@ -146,23 +181,45 @@ export default class Apollo extends NativeApollo {
             this.apollo_env[`${namespaceName}.${key}`] = configurations[key];
         }
 
-        let fileData = '';
-        for (const key in this.apollo_env) {
-            fileData += `${key}=${this.apollo_env[key]}\n`;
-        }
+        new EnvWriter({
+            env_file_type: this.env_file_type,
+            env_file_path: this.env_file_path,
+            logger: this.logger
+        }).write(data);
+    }
 
-        const envPath = this.env_file_path;
-        if (fs.existsSync(envPath)) {
-            // 只有 agent-worker 才能写入 env 文件
-            // 避免多个 app-worker 写入的时候文件已被移除，造成错误
-            const rename = `${envPath}.${Date.now()}`;
-            try {
-                fs.renameSync(envPath, rename);
-            }
-            catch (e) {
-                process.env.NODE_ENV !== 'production' && console.error(e);
-            }
+    protected readFromEnvFile(envPath: string = this.env_file_path): void {
+        if (this.app.type === 'agent')
+            return;
+        // 查找当前目录下所有的命名空间
+
+        const envReader = new EnvReader({
+            env_file_type: this.env_file_type,
+            env_file_path: this.env_file_path,
+            logger: this.logger
+        });
+        const manifest = envReader.loadManifest();
+        if (manifest) {
+            Object.keys(manifest).forEach(ns => {
+                const configs = envReader.readEnvFromFile(path.resolve(envPath, `.env.apollo.${ns}`), ns);
+                if (configs) {
+                    for (const namespaceKey in configs) {
+                        let config = this.configs.configs[namespaceKey];
+                        const configurations = configs[namespaceKey];
+
+                        if (!config) {
+                            config = new Map();
+                        }
+
+                        for (const key in configurations) {
+                            const configuration = configurations[key];
+                            process.env[`${namespaceKey}.${key}`] = configuration;
+                            config.set(key, configuration);
+                        }
+                        this.configs.configs[namespaceKey] = config;
+                    }
+                }
+            })
         }
-        fs.writeFileSync(envPath, fileData, 'utf-8');
     }
 }

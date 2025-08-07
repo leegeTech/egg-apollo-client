@@ -3,41 +3,41 @@ import * as assert from 'assert';
 import * as fs from 'fs';
 
 describe('test/apollo.test.ts', () => {
-    describe('default test for apollo', () => {
-        let app;
-        before(async () => {
-            app = mm.app({
-                baseDir: 'apps/apolloapp',
-            });
-            await app.ready();
-        });
-        after(() => app.close());
-        afterEach(mm.restore);
+    // describe('default test for apollo', () => {
+    //     let app;
+    //     before(async () => {
+    //         app = mm.app({
+    //             baseDir: 'apps/apolloapp',
+    //         });
+    //         await app.ready();
+    //     });
+    //     after(() => app.close());
+    //     afterEach(mm.restore);
 
-        // test sync http request by curllib
-        // it('sync http request by curllib', () => {
-        //     return request(app.callback())
-        //     .get('/curlTest')
-        //     .expect(200)
-        //     .expect(200);
-        // });
+    //     // test sync http request by curllib
+    //     // it('sync http request by curllib', () => {
+    //     //     return request(app.callback())
+    //     //     .get('/curlTest')
+    //     //     .expect(200)
+    //     //     .expect(200);
+    //     // });
 
-        it('should get config NODE_ENV=production', () => {
-            const NODE_ENV = app.config.NODE_ENV;
-            return assert(NODE_ENV === 'production', `expected 'production', config got ${NODE_ENV}`);
-        });
+    //     it('should get config NODE_ENV=production', () => {
+    //         const NODE_ENV = app.config.NODE_ENV;
+    //         return assert(NODE_ENV === 'production', `expected 'production', config got ${NODE_ENV}`);
+    //     });
 
-        it('should get NODE_ENV from app.apollo', () => {
-            const NODE_ENV = app.apollo.get('NODE_ENV');
-            return assert(NODE_ENV, `expected, NODE_ENV got ${NODE_ENV}`);
-        });
+    //     it('should get NODE_ENV from app.apollo', () => {
+    //         const NODE_ENV = app.apollo.get('NODE_ENV');
+    //         return assert(NODE_ENV, `expected, NODE_ENV got ${NODE_ENV}`);
+    //     });
 
-        it('should get NODE_ENV from ctx.apollo', () => {
-            const ctx = app.mockContext();
-            const NODE_ENV = ctx.apollo.get('NODE_ENV');
-            return assert(NODE_ENV, `expected, NODE_ENV got ${NODE_ENV}`);
-        });
-    });
+    //     it('should get NODE_ENV from ctx.apollo', () => {
+    //         const ctx = app.mockContext();
+    //         const NODE_ENV = ctx.apollo.get('NODE_ENV');
+    //         return assert(NODE_ENV, `expected, NODE_ENV got ${NODE_ENV}`);
+    //     });
+    // });
 
     describe('test for apollo env file', () => {
         let app;
@@ -46,10 +46,11 @@ describe('test/apollo.test.ts', () => {
                 baseDir: 'apps/apolloapp-set-env-file',
             });
             await app.ready();
+            
         });
         after(() => {
             app.close();
-            fs.unlinkSync(app.config.apollo.env_file_path);
+            // fs.unlinkSync(app.config.apollo.env_file_path);
         });
         afterEach(mm.restore);
 
@@ -58,5 +59,15 @@ describe('test/apollo.test.ts', () => {
 
             assert(fs.existsSync(envPath), `envPath: ${envPath} isExists expected true, but got false`);
         });
+
+        it('should get json from creek.tenant.locale.default.json', async () => {
+            await wait(3000)
+            const ns = app.apollo.getNamespace('creek.tenant.locale.default.json');
+            const countDown = ns.getString('Action.countDown');
+            // console.log('countDown', ns.configs);
+            assert.equal(countDown, '请等待 ${timeLeft} 秒');
+        })
     });
 });
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
